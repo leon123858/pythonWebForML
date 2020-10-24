@@ -1,0 +1,10 @@
+<body>  
+    <p>Hello World</p>
+    <span id="AnswerBox">_</span>
+    <script>
+            //{% if dnn_result is defined and dnn_result %}
+            var result = {{ dnn_result | tojson }};
+            //{% endif %}
+        document.getElementById('AnswerBox').innerHTML = result;
+    </script>
+</body>

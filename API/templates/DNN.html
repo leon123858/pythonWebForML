@@ -1,0 +1,185 @@
+<body style="background-color: black">
+	<font color="white" align="center">
+	<h2>
+		LACD DNN
+	</h2>
+    <h1 id="note">
+    </h1>
+	<!--表單中層數、神經元數、活化函數的表現方式還沒有想法-->
+     	<form action="/DNN" method="post" enctype="multipart/form-data">
+		<p>*請輸入分割比例(ex. 0.3表示30%test data,70%train data) <input type="number" id=split_ratio name="split_ratio" min="0" max="1" step="0.1" onchange="updateContext(split_name.value, split_ratio.value)" required></p>
+		<p>*請輸入訓練代數 <input type="number" id=epoch_number name="epoch" min="1" max="10000" step="1" onchange="updateContext(epoch_name.value, epoch_number.value)" required></p>
+		<p>
+			*請輸入隱藏層數 <input id=hidden_num type="number" name="hidden_num" min="1" onchange="updateOption(hidden_layer, pre_hidden_layer, hidden_num.value, hidden_name.value)" required>&nbsp;			
+		</p>
+		<p>
+			*請選擇第幾層<select id=hidden_layer name="hidden_layer"></select>&nbsp;
+			*請輸入該層神經元數<input type="number" id=neuron_each name="neuron_each" min="1" onchange="updateLayer(hidden_layer, neuron_each.value, activation)" required>&nbsp;
+			*請選擇活化函數 <select id=activation name="activation" onchange="updateLayer(hidden_layer, neuron_each.value, activation)">
+　				<option value="sigmoid">sigmoid</option>
+　				<option value="tanh">tanh</option>
+　				<option value="relu">relu</option></select>&nbsp;
+		</p>
+		<table align="left" border="1" cellpadding="10" cellspacing="10" style="width:500px">
+		<tbody>
+            <tr>
+                <td colspan="2" style="text-align:center"><span style="color:#ffffff">整體架構</td>
+            </tr>
+			<tr >
+				<td style="text-align:center"><span style="color:#ffffff">參數名稱</td>
+				<td style="text-align:center"><span style="color:#ffffff">設定值</td>
+			</tr>
+			<tr>
+				<td style="text-align:center"><span style="color:#ffffff">分割比例</td>
+				<td style="text-align:center"><span style="color:#ffffff" id="split">未設定</td>
+			</tr>
+			<tr>
+				<td style="text-align:center"><span style="color:#ffffff">訓練代數</td>
+				<td style="text-align:center"><span style="color:#ffffff" id="epoch">未設定</td>
+			</tr>
+			<tr>
+				<td style="text-align:center"><span style="color:#ffffff">隱藏層數</td>
+				<td style="text-align:center"><span style="color:#ffffff" id="hidden_layer_num">未設定</td>
+			</tr>
+		</tbody>
+		</table>
+             <table align="right" border="1" cellpadding="10" cellspacing="10" style="width:500px">
+                 <tbody>
+                     <tr>
+                         <td colspan="3" style="text-align:center"><span style="color:#ffffff">模型架構</td>
+                     </tr>
+                     <tr>
+                         <td style="text-align:center"><span style="color:#ffffff">指定層</td>
+                         <td style="text-align:center"><span style="color:#ffffff">神經元數</td>
+                         <td style="text-align:center"><span style="color:#ffffff">活化函數</td>
+                     </tr>
+                     <tr>
+                         <td style="text-align:center"><span style="color:#ffffff"><select id=pre_hidden_layer name="pre_hidden_layer" onChange="renew(this.selectedIndex, neuron_name.value, act_name.value)"></select></td>
+                         <td style="text-align:center"><span style="color:#ffffff" id="neuron_num">未設定</td>
+                         <td style="text-align:center"><span style="color:#ffffff" id="act">未設定</td>
+                     </tr>
+                 </tbody>
+             </table>
+        	<p><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+             <button type ="submit" name="btn" value="all" onclick="return check()">確認</button></p>
+    		<input type="hidden" id=epoch_name value="epoch">
+		<input type="hidden" id=split_name value="split">
+		<input type="hidden" id=hidden_name value="hidden_layer_num">
+        <input type="hidden" id=neuron_name value="neuron_num">
+        <input type="hidden" id=act_name value="act">
+        <input type="hidden" id="model" name="model" value="">
+        
+	</form>
+   
+	<!--以下是自訂錯誤訊息與動態新增神經元數-->
+
+	<script>
+	
+	var inputs = document.querySelectorAll('input')
+	inputs[1].addEventListener('input',function(){
+		if(inputs[1].validity.rangeOverflow | inputs[1].validity.rangeUnderflow){
+			inputs[1].setCustomValidity("請輸入介於0 - 1 之間的浮點數");
+		}
+		else
+		{
+			inputs[1].setCustomValidity("");
+		}
+	})
+	inputs[2].addEventListener('input',function(){
+		if(inputs[2].validity.rangeOverflow | inputs[2].validity.rangeUnderflow){
+			inputs[2].setCustomValidity("請輸入介於1 - 10000 之間的整數");
+		}
+		else
+		{
+			inputs[2].setCustomValidity("");
+		}
+	})
+	var model = [];
+	function updateOption(list1, list2, value, id) {
+	if(parseFloat(value) < 1 | Math.round(value) != value)
+	{
+		alert("請輸入正整數");
+		return;
+	}
+	document.getElementById(id).innerHTML=value;
+	list1.options.length = 0;
+	list2.options.length = 0;
+	var text = "";
+	for(i=0;i<value;i++)
+	{
+		text = "第"+(i+1).toString()+"層";
+		list1.options[i] = new Option(text, i);
+		list2.options[i] = new Option(text, i);
+	}
+	model = new Array(parseInt(value));
+	}
+
+	function updateLayer(hidden_layer,neuron,activation){	
+	var layer=[];
+	if (typeof (neuron) == null)
+	{
+	    alert("請先輸入神經元數");
+	    return;
+	}
+	if(neuron < 1 | Math.round(neuron) != neuron)
+	{
+		alert("請輸入正整數");
+		return;
+	}
+	layer.push(neuron.toString());
+	layer.push(activation[activation.selectedIndex].value);
+	model[hidden_layer.selectedIndex] = layer;
+	}
+	function updateContext(id,value){
+	
+	if(id == "epoch"){
+		if(parseFloat(value) < 1 | parseFloat(value) > 10000 | Math.round(value) != value)
+		{
+		alert("請輸入介於1 - 10000 之間的整數");
+		return;
+		}
+	}
+	if(id == "split"){
+		if(parseFloat(value) > 1 | parseFloat(value) < 0)
+		{
+		alert("請輸入介於0 - 1 之間的浮點數");
+		return;
+		}		
+	}
+	document.getElementById(id).innerHTML=value;
+	}
+	function renew(index,neuron,act)
+	{
+	    if (typeof (model[index]) != typeof ([]))
+	    {
+	        document.getElementById(neuron).innerHTML = "未設定";
+	        document.getElementById(act).innerHTML = "未設定";
+	    }
+	    document.getElementById(neuron).innerHTML = model[index][0];
+	    document.getElementById(act).innerHTML = model[index][1];
+	}
+	function check()
+	{
+	    document.getElementById("note").innerHTML = "運算中，請稍等\n結果出來後會自動跳轉頁面，請勿關閉此頁面。"
+	    var result = "";
+	    for(i=0;i<model.length;i++)
+	    {
+	        if (typeof (model[i]) != typeof ([])) {
+	            alert("請先設定好所有的隱藏層後再提交");
+	            return false;
+	        }
+	        if (i == (model.length-1))
+	        {
+	            result += (model[i][0] + ',' + model[i][1]);
+	        }
+	        else
+	        {
+	            result += (model[i][0] + ',' + model[i][1] + '\t');
+	        }               
+	    }
+	    document.getElementById("model").value = result;
+	    return true;
+	}
+	</script>
+     	
+</body>
